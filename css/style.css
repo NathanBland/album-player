@@ -246,6 +246,9 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 .lcd-title.scroll .lcd-marquee{animation:lcd-marquee var(--dur,10s) linear infinite}
 .lcd-title.scroll .lcd-marquee>span{padding-right:3em}
 @keyframes lcd-marquee{0%,18%{transform:translateX(0)}100%{transform:translateX(calc(-1 * var(--loop,0px)))}}
+/* segment-style blink: elapsed time while paused, the status word while the tray moves */
+.lcd .blink{animation:lcd-blink 1s step-end infinite}
+@keyframes lcd-blink{50%{opacity:.12}}
 .lcd-rail{position:relative;height:3px;margin-top:10px;border-radius:2px;background:rgba(159,232,176,.14);cursor:pointer;touch-action:none}
 .lcd-rail::before{content:"";position:absolute;inset:-8px 0} /* bigger hit area */
 .lcd-rail .fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:2px;background:#9fe8b0;box-shadow:0 0 6px rgba(159,232,176,.6)}
@@ -257,7 +260,11 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 .slot svg{width:11px;height:11px;fill:currentColor;color:var(--strip-print);flex:none;opacity:.9}
 .slot i{display:block;width:28px;height:7px;border-radius:2px;background:linear-gradient(180deg,var(--slot-hi),var(--slot));
   box-shadow:0 1px 0 rgba(255,255,255,.08),inset 0 -1px 0 rgba(0,0,0,.4);transition:transform .08s,filter .2s}
-.slot.play i{background:linear-gradient(180deg,#f08a55,var(--accent))}
+.slot.play i{background:linear-gradient(180deg,#f08a55,var(--accent));transition:transform .08s,filter .2s,box-shadow .35s}
+/* the Play key is backlit while the disc turns */
+.slot.play.on i{background:linear-gradient(180deg,#ffb27e,#f2793c);
+  box-shadow:0 1px 3px rgba(242,121,60,.55),0 1px 0 rgba(255,255,255,.08),inset 0 1px 0 rgba(255,236,214,.6)}
+.slot.play.on svg{color:var(--accent);opacity:1}
 .slot:hover i{filter:brightness(1.35)}
 .slot:active i{transform:translateY(1px) scaleY(.85)}
 .slot:disabled{opacity:.4;pointer-events:none}
@@ -288,4 +295,4 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 @media (max-width:760px){ .scene{grid-template-columns:1fr} .rack-col{min-height:0;height:290px} }
 @media (max-width:480px){ .case-area{--cw:150px} .liner{padding:8px 7px 7px 9px} }
 @media (max-width:420px){ .strip{flex-basis:62px} .slots{padding:0 6px} .slot i{width:22px} }
-@media (prefers-reduced-motion:reduce){ .case-front,.case-stage,.spine,.player-cd-wrap,.tray-shelf{transition:none!important} .lcd-title.scroll .lcd-marquee{animation:none} }
+@media (prefers-reduced-motion:reduce){ .case-front,.case-stage,.spine,.player-cd-wrap,.tray-shelf{transition:none!important} .lcd-title.scroll .lcd-marquee{animation:none} .lcd .blink{animation:none;opacity:.55} }

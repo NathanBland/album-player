@@ -151,15 +151,17 @@ const picker=$('#picker'),libNote=$('#libNote'),knob=$('#knob');
 
 /* ---------- volume knob: drag, wheel or arrow keys; 0..1 maps to -135°..135° ---------- */
 const VOL_KEY='album-player:volume';
-function setVolume(v){
+let volShownUntil=0; // the LCD shows "VOL nn" in place of the track counter for a moment after each turn
+function setVolume(v,show=true){
   v=clamp(v,0,1);engine.setVolume(v);
+  if(show)volShownUntil=performance.now()+1400;
   knob.style.setProperty('--rot',`${-135+v*270}deg`);
   knob.setAttribute('aria-valuenow',Math.round(v*100));
   try{localStorage.setItem(VOL_KEY,String(v));}catch{}
 }
 {
   let saved=NaN;try{saved=parseFloat(localStorage.getItem(VOL_KEY));}catch{}
-  setVolume(Number.isFinite(saved)?saved:.8);
+  setVolume(Number.isFinite(saved)?saved:.8,false);
   let drag=null;
   knob.addEventListener('pointerdown',e=>{drag={y:e.clientY,v:engine.volume};try{knob.setPointerCapture(e.pointerId);}catch{}});
   knob.addEventListener('pointermove',e=>{ if(drag)setVolume(drag.v+(drag.y-e.clientY)/160); });
@@ -530,6 +532,9 @@ if(ms){
 
 /* ---------- loop ---------- */
 let last=performance.now();
+// The player's disc has inertia: it spins up when play starts and coasts down on pause (rad/s).
+const SPIN_RATE=4.2,SPIN_UP=2.4,SPIN_DOWN=1.1;
+let discAngle=0,discVel=0;
 function loop(t){
   const dt=Math.min(.05,(t-last)/1000);last=t;
   const a=alb();
@@ -549,7 +554,12 @@ function loop(t){
   A.level+=(target-A.level)*Math.min(1,dt*8);
 
   drawDisc(caseCd,a,P.pal,S.clock*0.3,t/1000*0.6,0.1);
-  drawDisc(playerCd,a,P.pal,S.clock*(spin?4.2:0.4),t/1000*0.6,A.level);
+  const spinTarget=spin?SPIN_RATE:0;
+  if(S.disc!=='player'||reduceMotion.matches)discVel=spinTarget; // no coasting in or out of the tray
+  else discVel+=(spinTarget-discVel)*Math.min(1,dt*(spin?SPIN_UP:SPIN_DOWN));
+  if(discVel<.01&&!spin)discVel=0;
+  discAngle=(discAngle+discVel*dt)%(Math.PI*2);
+  drawDisc(playerCd,a,P.pal,discAngle,t/1000*0.6,A.level);
   bars.forEach((b,i)=>{
     let v=.03;
     if(spin)v=bands?bands[i]:clamp(A.level*(.5+.5*(1-Math.abs(i-7.5)/7.5))+Math.sin(t/120+i)*.08,0,1);
@@ -560,9 +570,14 @@ function loop(t){
 
   const inPlayer=S.disc==='player';
   const cur=inPlayer?now():0,len=inPlayer?length():0;
-  setLcdTitle(inPlayer?track().title:'\u2014');
+  // like the firmware on a real deck: READING while the tray draws the disc in, OPEN while it ejects
+  setLcdTitle(inPlayer?track().title:S.disc==='loading-in'?'READING':S.disc==='loading-out'?'OPEN':'\u2014');
   const trk=inPlayer?'TRK '+String(S.ti+1).padStart(2,'0')+'/'+String(a.tracks.length).padStart(2,'0'):'TRK --/--';
-  lcdTrack.textContent=S.decoding?trk+' \u00b7 DECODING':trk;
+  lcdTrack.textContent=t<volShownUntil?'VOL '+String(Math.round(engine.volume*100)).padStart(3,'\u00a0')
+    :S.decoding?trk+' \u00b7 DECODING':trk;
+  lcdTitle.classList.toggle('blink',S.disc==='loading-in'||S.disc==='loading-out');
+  lcdTime.classList.toggle('blink',inPlayer&&!spin&&!S.decoding&&cur>0); // paused, not stopped
+  playBtn.classList.toggle('on',spin);
   lcdTime.textContent=!inPlayer?'00:00':S.decoding?'--:--':fmt(cur);
   tot.textContent=inPlayer&&len?fmt(len):'00:00';
   const pct=len?cur/len*100:0;
