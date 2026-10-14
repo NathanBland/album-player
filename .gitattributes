@@ -1,0 +1,2 @@
+# Minified third-party builds: no line diffs, excluded from language stats
+vendor/*.min.js -diff linguist-vendored
