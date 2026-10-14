@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CD case &amp; player</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main>
+  <h1 class="sr-only">Album player</h1>
+
+  <div class="frame" id="frame">
+    <div class="scene">
+      <aside class="rack-col" aria-label="CD rack">
+        <div class="rack-inner">
+          <div class="rack-tools">
+            <input type="search" id="rackSearch" placeholder="Search rack" aria-label="Search albums" autocomplete="off" spellcheck="false">
+            <button class="pbtn rack-add" id="addBtn" aria-label="Add album folders" title="Add album folders">+</button>
+          </div>
+          <div class="shelving" id="shelving" role="status" aria-live="polite" hidden>
+            <div class="shelving-text"><span class="shelving-main" id="shelvingMain"></span><span class="shelving-sub" id="shelvingSub"></span></div>
+            <div class="shelving-meter"><i id="shelvingBar"></i></div>
+          </div>
+          <div class="rack">
+            <div class="rack-slots" id="rack"></div>
+            <p class="rack-empty" id="rackEmpty" hidden>No matches</p>
+          </div>
+        </div>
+      </aside>
+
+      <div class="stage-col">
+      <div class="case-col">
+        <div class="case-area" id="caseArea">
+          <div class="case-stage">
+            <div class="case" id="case">
+              <div class="tray">
+                <div class="tray-card" id="trayCard"></div>
+                <div class="tray-spine" id="traySpine"><span></span></div>
+                <div class="tray-hub"></div>
+                <div class="case-cd-wrap" id="caseCdWrap"><canvas id="caseCd"></canvas></div>
+                <div class="tray-plastic"></div>
+              </div>
+              <div class="case-front" id="caseFront">
+                <div class="cover-face"><img id="caseImg" alt=""><div class="cover-plastic"></div></div>
+                <div class="cover-back"><div class="liner" id="liner"></div><div class="cover-plastic"></div></div>
+              </div>
+              <div class="hinge"></div>
+            </div>
+          </div>
+        </div>
+        <div class="case-actions">
+          <button class="pbtn" id="toggleCase">Open case</button>
+          <button class="pbtn accent" id="loadBtn">Load disc</button>
+        </div>
+      </div>
+
+      <div class="player-col">
+        <div class="device">
+         <div class="device-main">
+          <div class="deck">
+            <div class="deck-glass"></div>
+            <span class="deck-empty" id="deckEmpty">No disc loaded</span>
+            <div class="tray-shelf" id="tray"></div>
+            <div class="player-cd-wrap" id="playerCdWrap"><canvas id="playerCd"></canvas></div>
+          </div>
+          <div class="lcd">
+            <div class="lcd-row1"><span class="lcd-title" id="lcdTitle">&mdash;</span><span class="lcd-time"><span id="lcdTime">00:00</span><span class="lcd-tot"> / <span id="tot">00:00</span></span></span></div>
+            <div class="lcd-row2"><span id="lcdTrack">TRK --/--</span><div class="lcd-bars" id="lcdBars"></div></div>
+            <div class="lcd-rail" id="rail" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="fill" id="fill"></div></div>
+          </div>
+         </div>
+         <div class="strip">
+          <div class="slots">
+            <button class="slot" id="prev" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg><i></i></button>
+            <button class="slot play" id="play" aria-label="Play or pause"><svg viewBox="0 0 24 24"><path id="playicon" d="M7 4.5v15l12-7.5z"/></svg><i></i></button>
+            <button class="slot" id="next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5l11 7-11 7z"/></svg><i></i></button>
+            <button class="slot" id="eject" aria-label="Eject"><svg viewBox="0 0 24 24"><path d="M12 5l7 8H5zM5 16h14v3H5z"/></svg><i></i></button>
+          </div>
+          <div class="knob-wrap">
+            <div class="knob" id="knob" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80"><span class="knob-mark"></span></div>
+            <span class="legend">Vol</span>
+          </div>
+         </div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <div class="drop-hint" id="dropHint"><span>Drop album folders to add them</span></div>
+  </div>
+  <input type="file" id="picker" webkitdirectory multiple hidden>
+
+  <p class="lib-note" id="libNote"></p>
+
+</main>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
