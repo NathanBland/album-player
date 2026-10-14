@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CD case &amp; player</title>
 <link rel="stylesheet" href="css/style.css">
+<script>/* apply a saved light/dark choice before first paint (no flash) */try{const t=localStorage.getItem('album-player:theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch{}</script>
 </head>
 <body>
 <main>
@@ -77,6 +78,15 @@
             <button class="slot" id="next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5l11 7-11 7z"/></svg><i></i></button>
             <button class="slot" id="eject" aria-label="Eject"><svg viewBox="0 0 24 24"><path d="M12 5l7 8H5zM5 16h14v3H5z"/></svg><i></i></button>
           </div>
+          <button class="mode-switch" id="themeBtn" type="button" data-mode="system">
+            <span class="mode-legends" aria-hidden="true">
+              <svg class="ico-system" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="3"/><path d="M12 4a8 8 0 0 1 0 16z"/></svg>
+              <svg class="ico-light" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v3.5M12 19.5V23M1 12h3.5M19.5 12H23M4.2 4.2l2.5 2.5M17.3 17.3l2.5 2.5M4.2 19.8l2.5-2.5M17.3 6.7l2.5-2.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+              <svg class="ico-dark" viewBox="0 0 24 24"><path d="M21 14.5A9 9 0 0 1 9.5 3a9 9 0 1 0 11.5 11.5z"/></svg>
+            </span>
+            <span class="mode-track" aria-hidden="true"><i class="mode-nub"></i></span>
+            <span class="legend" id="themeLabel">System</span>
+          </button>
           <div class="knob-wrap">
             <div class="knob" id="knob" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80"><span class="knob-mark"></span></div>
             <span class="legend">Vol</span>

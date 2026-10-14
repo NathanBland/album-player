@@ -149,6 +149,26 @@ const tot=$('#tot'),fill=$('#fill'),rail=$('#rail');
 const playBtn=$('#play'),playicon=$('#playicon'),prevBtn=$('#prev'),nextBtn=$('#next'),ejectBtn=$('#eject');
 const picker=$('#picker'),libNote=$('#libNote'),knob=$('#knob');
 
+/* ---------- theme: System -> Light -> Dark, remembered per browser ---------- */
+const THEME_KEY='album-player:theme',THEMES=['system','light','dark'],THEME_NAMES={system:'System',light:'Light',dark:'Dark'};
+const themeBtn=$('#themeBtn'),themeLabel=$('#themeLabel');
+function applyTheme(mode){
+  if(mode==='system')delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme=mode;
+  const next=THEMES[(THEMES.indexOf(mode)+1)%THEMES.length];
+  themeBtn.dataset.mode=mode;themeLabel.textContent=THEME_NAMES[mode];
+  themeBtn.setAttribute('aria-label',`Theme: ${THEME_NAMES[mode]}. Switch to ${THEME_NAMES[next]}`);
+  themeBtn.title=`Switch to ${THEME_NAMES[next]} theme`;
+}
+{
+  let saved='system';try{saved=localStorage.getItem(THEME_KEY)||'system';}catch{}
+  applyTheme(THEMES.includes(saved)?saved:'system');
+  themeBtn.addEventListener('click',()=>{
+    const mode=THEMES[(THEMES.indexOf(themeBtn.dataset.mode)+1)%THEMES.length];
+    applyTheme(mode);
+    try{ mode==='system'?localStorage.removeItem(THEME_KEY):localStorage.setItem(THEME_KEY,mode); }catch{}
+  });
+}
+
 /* ---------- volume knob: drag, wheel or arrow keys; 0..1 maps to -135°..135° ---------- */
 const VOL_KEY='album-player:volume';
 let volShownUntil=0; // the LCD shows "VOL nn" in place of the track counter for a moment after each turn

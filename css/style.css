@@ -5,11 +5,11 @@
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   --a1:140,160,190; --a2:190,140,140; --a3:210,190,140; /* sampled from the current cover */
   --accent:#e2703a;       /* the player's orange key */
+  color-scheme:light;     /* form controls and scrollbars follow the theme */
   --s-muted:#8fa3b0;      /* text inside the dark deck */
 
   /* light: cream body */
   --bg:#efece5; --fg:#24211d; --muted:#7a7268; --line:rgba(36,33,29,.12);
-  --surface:#e4dfd4; --surface-line:rgba(36,33,29,.1);
   --body:#ebe7de; --body-hi:#f7f4ee; --body-lo:#d6d0c4; --seam:rgba(36,33,29,.13); --print:#8a8175; --strip-print:#8a8175;
   --strip:linear-gradient(180deg,#efebe3,#e2ddd2);
   --slot:#1f1d1b; --slot-hi:#3a3733; --knob:#2b2926; --knob-hi:#4a4642;
@@ -20,8 +20,8 @@
   --rack-back:linear-gradient(180deg,#5a3c25,#4a311e);
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  color-scheme:dark;
   --bg:#13100d; --fg:#ece5da; --muted:#9b9083; --line:rgba(236,229,218,.12);
-  --surface:#1b1714; --surface-line:rgba(236,229,218,.08);
   --body:#2a2826; --body-hi:#353330; --body-lo:#1c1b19; --seam:rgba(0,0,0,.45); --print:#8c847a; --strip-print:rgba(255,236,214,.62);
   --strip:linear-gradient(90deg,rgba(0,0,0,.18),transparent 30%,rgba(255,255,255,.05) 60%,rgba(0,0,0,.2)),
           repeating-linear-gradient(176deg,rgba(40,18,6,.22) 0 1px,transparent 1px 5px,rgba(255,220,180,.05) 5px 6px,transparent 6px 11px),
@@ -34,8 +34,8 @@
   --rack-back:linear-gradient(180deg,#2c1a0f,#22140b);
 }}
 :root[data-theme="dark"]{
+  color-scheme:dark;
   --bg:#13100d; --fg:#ece5da; --muted:#9b9083; --line:rgba(236,229,218,.12);
-  --surface:#1b1714; --surface-line:rgba(236,229,218,.08);
   --body:#2a2826; --body-hi:#353330; --body-lo:#1c1b19; --seam:rgba(0,0,0,.45); --print:#8c847a; --strip-print:rgba(255,236,214,.62);
   --strip:linear-gradient(90deg,rgba(0,0,0,.18),transparent 30%,rgba(255,255,255,.05) 60%,rgba(0,0,0,.2)),
           repeating-linear-gradient(176deg,rgba(40,18,6,.22) 0 1px,transparent 1px 5px,rgba(255,220,180,.05) 5px 6px,transparent 6px 11px),
@@ -49,14 +49,14 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--fg);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.5}
+/* the tabletop is the page itself, lit faintly by the current cover */
+body{min-height:100vh;background:radial-gradient(60% 55% at 62% 30%,rgba(var(--a1),.14),transparent 70%) fixed,var(--bg);color:var(--fg);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.5}
 main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,32px) 40px}
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
-/* ---- stage: the tabletop everything sits on ---- */
-.frame{position:relative;background:var(--surface);border:1px solid var(--surface-line);border-radius:16px;overflow:hidden;color:var(--fg)}
-.scene{display:grid;grid-template-columns:232px minmax(0,1fr);gap:clamp(20px,4vw,44px);padding:clamp(24px,4vw,44px) clamp(16px,4vw,36px);
-  background:radial-gradient(50% 60% at 65% 35%,rgba(var(--a1),.16),transparent 70%)}
+/* ---- stage: the rack and the player, straight on the tabletop ---- */
+.frame{position:relative}
+.scene{display:grid;grid-template-columns:232px minmax(0,1fr);gap:clamp(20px,4vw,44px);padding:clamp(8px,2vw,20px) 0}
 .stage-col{display:flex;flex-direction:column;align-items:center;gap:28px;min-width:0}
 
 /* ---- rack: a wooden stand of jewel cases, spines out ---- */
@@ -270,6 +270,25 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 .slot:disabled{opacity:.4;pointer-events:none}
 .slot:focus-visible{outline:2px solid var(--accent);outline-offset:0}
 
+/* ---- theme switch: a 3-position slide switch on the strip (System / Light / Dark) ---- */
+.mode-switch{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:auto auto;column-gap:6px;row-gap:6px;
+  align-items:center;justify-items:center;padding:4px 5px;border-radius:5px}
+.mode-switch:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mode-legends{display:grid;grid-template-rows:repeat(3,12px);row-gap:2px;align-items:center}
+.mode-legends svg{display:block;width:9px;height:9px;fill:currentColor;color:var(--strip-print);opacity:.5;transition:opacity .2s,color .2s}
+.mode-switch[data-mode="system"] .ico-system,.mode-switch[data-mode="light"] .ico-light,.mode-switch[data-mode="dark"] .ico-dark{opacity:1;color:var(--accent)}
+.mode-track{position:relative;width:12px;height:40px;border-radius:6px;background:linear-gradient(180deg,var(--slot-hi),var(--slot));
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.08)}
+.mode-nub{position:absolute;left:1px;top:1px;width:10px;height:12px;border-radius:3px;
+  background:linear-gradient(180deg,#f3eee6,#c7c0b4);box-shadow:0 1px 2px rgba(0,0,0,.55),inset 0 -1px 0 rgba(0,0,0,.15);
+  transition:transform .18s cubic-bezier(.16,1,.3,1)} /* snaps into its detent, no overshoot */
+.mode-switch[data-mode="light"] .mode-nub{transform:translateY(13px)}
+.mode-switch[data-mode="dark"] .mode-nub{transform:translateY(26px)}
+.mode-switch:hover .mode-nub{filter:brightness(1.08)}
+.mode-switch:active .mode-nub{filter:brightness(.92)}
+.mode-switch .legend{grid-column:1/-1}
+@media (prefers-reduced-motion:reduce){ .mode-nub{transition:none} }
+
 /* ---- volume knob ---- */
 .knob-wrap{display:flex;flex-direction:column;align-items:center;gap:6px}
 .knob{--rot:0deg;width:44px;height:44px;border-radius:50%;cursor:grab;touch-action:none;position:relative;
@@ -283,7 +302,7 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 .knob-mark{position:absolute;left:50%;top:5px;width:3px;height:10px;margin-left:-1.5px;border-radius:2px;background:var(--accent)}
 .legend{font-family:var(--mono);font-size:.55rem;letter-spacing:.24em;text-transform:uppercase;color:var(--strip-print)}
 
-.drop-hint{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--surface) 88%,transparent);
+.drop-hint{position:fixed;inset:12px;z-index:10;display:grid;place-items:center;background:color-mix(in srgb,var(--bg) 88%,transparent);
   border:2px dashed var(--accent);border-radius:16px;opacity:0;pointer-events:none;transition:opacity .15s;
   font-family:var(--mono);font-size:.8rem;letter-spacing:.12em;text-transform:uppercase}
 .frame.dragging .drop-hint{opacity:1}
