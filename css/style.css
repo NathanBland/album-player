@@ -65,7 +65,7 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 .rack-tools{display:flex;gap:6px}
 .rack-tools input{flex:1;min-width:0;font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;padding:7px 10px;border-radius:5px;
   border:1px solid var(--key-line);background:var(--key);color:var(--key-fg);box-shadow:inset 0 1px 2px rgba(0,0,0,.12)}
-.rack-tools input::placeholder{color:var(--print)}
+.rack-tools input::placeholder{color:color-mix(in srgb,var(--key-fg) 66%,var(--key))} /* ≥4.5:1 in both themes */
 .rack-tools input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .rack-add{padding:6px 12px;font-size:.9rem;letter-spacing:0}
 /* import progress: a small plaque above the rack while albums stream onto the shelf */
@@ -189,7 +189,7 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 .case-actions{display:flex;gap:8px}
 
 /* ---- case keys: hardware keycaps ---- */
-.pbtn{all:unset;cursor:pointer;font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
+.pbtn{all:unset;cursor:pointer;font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
   padding:8px 13px;border-radius:5px;color:var(--key-fg);background:var(--key);
   box-shadow:0 1px 0 var(--key-line),0 2px 4px var(--shadow),inset 0 1px 0 rgba(255,255,255,.12);
   transition:transform .08s,box-shadow .08s,filter .2s}
