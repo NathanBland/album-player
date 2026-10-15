@@ -278,7 +278,7 @@ liner.addEventListener('click',e=>{ const b=e.target.closest('button[data-ti]');
 function setCaseOpen(open){
   S.caseOpen=open;caseEl.classList.toggle('open',open);caseArea.classList.toggle('open',open);
   liner.inert=!open; // the liner faces away while closed
-  toggleCaseBtn.textContent=open?'Close case':'Open case';
+  toggleCaseBtn.textContent=open?'Close case':'Open case';toggleCaseBtn.dataset.on=open; // latching key: its LED stays lit while the case is open
   updateButtons();
 }
 function updateButtons(){

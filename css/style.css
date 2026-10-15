@@ -5,6 +5,7 @@
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
   --a1:140,160,190; --a2:190,140,140; --a3:210,190,140; /* sampled from the current cover */
   --accent:#e2703a;       /* the player's orange key */
+  --led-green:#79f2a6; --led-amber:#ffb24a; --led-red:#ff6248;
   color-scheme:light;     /* form controls and scrollbars follow the theme */
   --s-muted:#8fa3b0;      /* text inside the dark deck */
 
@@ -14,6 +15,9 @@
   --strip:linear-gradient(180deg,#efebe3,#e2ddd2);
   --slot:#1f1d1b; --slot-hi:#3a3733; --knob:#2b2926; --knob-hi:#4a4642;
   --key:#f6f3ed; --key-fg:#2a2622; --key-line:rgba(36,33,29,.16);
+  --cap:#2b2927; --cap-hi:#3e3b37; --cap-lo:#1a1917; --cap-ink:#ece6da;
+  --well:rgba(60,48,36,.17); --well-hi:rgba(255,255,255,.75);
+  --tape:#f3eddf; --tape-ink:#2a2620; --tape-dim:#6b6255;
   --groove:#d3cdc1; --shadow:rgba(60,48,36,.22);
   --wood:repeating-linear-gradient(92deg,rgba(90,52,22,.10) 0 1px,transparent 1px 6px,rgba(255,235,205,.08) 6px 7px,transparent 7px 13px),
          linear-gradient(180deg,#b9875a,#a2724a);
@@ -28,6 +32,9 @@
           linear-gradient(180deg,#8a5634,#6d3f22 55%,#5e341b);
   --slot:#121110; --slot-hi:#2c2a27; --knob:#151413; --knob-hi:#33302c;
   --key:#33312e; --key-fg:#ece5da; --key-line:rgba(0,0,0,.45);
+  --cap:#262422; --cap-hi:#3a3733; --cap-lo:#141312; --cap-ink:#e6dfd3;
+  --well:rgba(0,0,0,.45); --well-hi:rgba(255,255,255,.07);
+  --tape:#d9d1c0; --tape-ink:#24201b; --tape-dim:#5c5448;
   --groove:#1a1917; --shadow:rgba(0,0,0,.55);
   --wood:repeating-linear-gradient(92deg,rgba(40,18,6,.22) 0 1px,transparent 1px 6px,rgba(255,220,180,.05) 6px 7px,transparent 7px 13px),
          linear-gradient(180deg,#7c4b2c,#5e341b);
@@ -42,6 +49,9 @@
           linear-gradient(180deg,#8a5634,#6d3f22 55%,#5e341b);
   --slot:#121110; --slot-hi:#2c2a27; --knob:#151413; --knob-hi:#33302c;
   --key:#33312e; --key-fg:#ece5da; --key-line:rgba(0,0,0,.45);
+  --cap:#262422; --cap-hi:#3a3733; --cap-lo:#141312; --cap-ink:#e6dfd3;
+  --well:rgba(0,0,0,.45); --well-hi:rgba(255,255,255,.07);
+  --tape:#d9d1c0; --tape-ink:#24201b; --tape-dim:#5c5448;
   --groove:#1a1917; --shadow:rgba(0,0,0,.55);
   --wood:repeating-linear-gradient(92deg,rgba(40,18,6,.22) 0 1px,transparent 1px 6px,rgba(255,220,180,.05) 6px 7px,transparent 7px 13px),
          linear-gradient(180deg,#7c4b2c,#5e341b);
@@ -62,14 +72,19 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 /* ---- rack: a wooden stand of jewel cases, spines out ---- */
 .rack-col{position:relative;min-height:320px}
 .rack-inner{position:absolute;inset:0;display:flex;flex-direction:column;gap:10px}
-.rack-tools{display:flex;gap:6px}
-.rack-tools input{flex:1;min-width:0;font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;padding:7px 10px;border-radius:5px;
-  border:1px solid var(--key-line);background:var(--key);color:var(--key-fg);box-shadow:inset 0 1px 2px rgba(0,0,0,.12)}
-.rack-tools input::placeholder{color:color-mix(in srgb,var(--key-fg) 66%,var(--key))} /* ≥4.5:1 in both themes */
-.rack-tools input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.rack-add{padding:6px 12px;font-size:.9rem;letter-spacing:0}
+.rack-tools{display:flex;gap:14px;align-items:center;padding:5px 5px 2px}
+/* the search field is a mixer's scribble strip: a band of label tape set into a well */
+.rack-tools input{flex:1;min-width:0;font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;padding:8px 10px;border:0;border-radius:2px;
+  color:var(--tape-ink);
+  background:linear-gradient(180deg,rgba(255,255,255,.38),transparent 45%,rgba(0,0,0,.04)),
+    repeating-linear-gradient(90deg,rgba(80,60,30,.025) 0 1px,transparent 1px 4px),var(--tape);
+  box-shadow:0 0 0 1px rgba(0,0,0,.3),0 0 0 5px var(--well),0 1px 0 5px var(--well-hi),inset 0 1px 2px rgba(0,0,0,.2)}
+.rack-tools input::placeholder{color:var(--tape-dim);opacity:1} /* ≥4.5:1 on the tape in both themes */
+.rack-tools input:focus-visible{outline:2px solid var(--accent);outline-offset:7px}
+.rack-add{display:inline-grid;place-items:center;width:34px;height:32px;padding:0;font-size:1.15rem;font-weight:400;letter-spacing:0}
+.rack-add::before{display:none}
 /* remembered albums whose folder isn't connected yet: the bar asks for it, their spines sit dimmed */
-.reconnect{display:flex;gap:6px}
+.reconnect{display:flex;gap:14px;padding:5px 5px 2px}
 .reconnect[hidden]{display:none}
 .reconnect .pbtn{white-space:nowrap}
 .reconnect .accent{flex:1;text-align:center}
@@ -91,7 +106,7 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
   background:linear-gradient(100deg,transparent 38%,rgba(255,236,214,.07) 50%,transparent 62%) 0 0/300% 100%;
   animation:shelfSheen 1.9s linear infinite}
 @keyframes shelfSheen{from{background-position:100% 0}to{background-position:0 0}}
-@media (prefers-reduced-motion:reduce){ .rack.loading::after,.shelving.indeterminate .shelving-meter i{animation:none} }
+@media (prefers-reduced-motion:reduce){ .rack.loading::after,.shelving.indeterminate .shelving-meter i{animation:none} #reconnectBtn::before{animation:none} }
 .rack{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;border-radius:4px;background:var(--wood);
   padding:10px 12px 13px 12px; /* top board, base, side panels */
   box-shadow:0 20px 30px -14px var(--shadow),0 3px 8px var(--shadow),inset 0 1px 0 rgba(255,255,255,.14),inset 0 -2px 0 rgba(0,0,0,.25)}
@@ -192,18 +207,35 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 .liner-tracks button.now .n::after{content:"\25B6";position:absolute;left:0;top:50%;transform:translateY(-50%);font-size:.48rem;color:rgb(var(--ink));opacity:1}
 .liner-foot{font-family:var(--mono);font-size:.46rem;letter-spacing:.14em;text-transform:uppercase;opacity:.6;margin-top:5px;
   display:flex;justify-content:space-between;gap:6px}
-.case-actions{display:flex;gap:8px}
+.case-actions{display:flex;gap:16px;padding-top:4px}
 
 /* ---- case keys: hardware keycaps ---- */
-.pbtn{all:unset;cursor:pointer;font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
-  padding:8px 13px;border-radius:5px;color:var(--key-fg);background:var(--key);
-  box-shadow:0 1px 0 var(--key-line),0 2px 4px var(--shadow),inset 0 1px 0 rgba(255,255,255,.12);
-  transition:transform .08s,box-shadow .08s,filter .2s}
-.pbtn:hover{filter:brightness(1.04)}
-.pbtn:active{transform:translateY(1px);box-shadow:0 0 0 var(--key-line),0 1px 2px var(--shadow)}
-.pbtn:disabled{opacity:.4;cursor:default;pointer-events:none}
-.pbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.pbtn.accent{background:var(--accent);color:#1e120a}
+.pbtn{all:unset;box-sizing:border-box;position:relative;cursor:pointer;text-align:center;
+  font-family:var(--mono);font-size:.62rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;line-height:1;
+  padding:13px 14px 8px;border-radius:4px;color:var(--cap-ink);
+  background:linear-gradient(180deg,var(--cap-hi),var(--cap) 48%,var(--cap-lo));
+  /* cap edge · cap height · the well cut into the panel · its lower lip catching light */
+  --rise:3px;
+  box-shadow:0 0 0 1px rgba(0,0,0,.55),0 var(--rise) 0 1px rgba(0,0,0,.42),
+    0 calc(var(--rise) - 3px) 0 5px var(--well),0 calc(var(--rise) - 2px) 0 5px var(--well-hi),
+    inset 0 1px 0 rgba(255,255,255,.13),inset 0 -2px 3px rgba(0,0,0,.25);
+  transition:transform .06s,box-shadow .06s,filter .2s}
+/* LED window across the top of the cap */
+.pbtn::before{content:"";position:absolute;left:10px;right:10px;top:5px;height:2px;border-radius:1px;
+  background:rgba(0,0,0,.6);box-shadow:inset 0 1px 1px rgba(0,0,0,.5),0 1px 0 rgba(255,255,255,.06);transition:background .2s,box-shadow .2s}
+.pbtn:hover{filter:brightness(1.1)}
+/* pressed: the cap drops into its well (the well itself stays put) */
+.pbtn:active{transform:translateY(2px);--rise:1px}
+.pbtn:disabled{cursor:default;pointer-events:none;color:color-mix(in srgb,var(--cap-ink) 42%,var(--cap))}
+.pbtn:focus-visible{outline:2px solid var(--accent);outline-offset:7px}
+.pbtn.accent{color:#2a1306;background:linear-gradient(180deg,#f4925d,var(--accent) 50%,#c35a27)}
+.pbtn.accent::before{background:rgba(70,22,0,.5)}
+.pbtn.accent:disabled{filter:saturate(.4) brightness(.92);color:rgba(42,19,6,.55)}
+/* lit states */
+.pbtn.lit-green::before,#toggleCase[data-on="true"]::before{background:var(--led-green);box-shadow:0 0 6px var(--led-green),0 0 2px var(--led-green)}
+#loadBtn:not(:disabled)::before,.pbtn.lit-amber::before{background:#fff1c9;box-shadow:0 0 6px var(--led-amber),0 0 2px var(--led-amber)}
+#reconnectBtn::before{background:#fff1c9;box-shadow:0 0 7px var(--led-amber);animation:led-attn 1.6s ease-in-out infinite}
+@keyframes led-attn{50%{background:rgba(70,22,0,.5);box-shadow:none}}
 
 /* ---- device body ---- */
 .player-col{--strip-w:74px;--disc:210px;position:relative;width:100%;max-width:500px;margin-top:22px} /* headroom for a disc standing in the slot */ /* --disc: 84% of the 250px deck */
