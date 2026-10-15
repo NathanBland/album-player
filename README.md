@@ -36,7 +36,7 @@ albums/
 - An optional `album.json` (`{"title": …, "artist": …, "year": …}`) in an album folder overrides both tags and parsed names.
 - Formats: anything your browser plays natively (mp3, m4a/aac, flac, wav, ogg/opus, webm), plus AIFF/AIFF-C. If the browser can't decode a file, the player falls back to software decoding (see below). APE and single-file album rips with a `.cue` sheet aren't supported.
 
-**Drop or pick.** Drag album folders (or a whole music folder) onto the player, or click **+** above the rack. These live only for the current tab.
+**Drop or pick.** Drag album folders (or a whole music folder) onto the player, or click **+** above the rack. The rack is remembered between visits (album names, covers and track paths in the browser's IndexedDB; no music is copied). Next time, click **Reconnect folder** (Chrome/Edge: one permission click) or **Choose folder** (Firefox/Safari: pick the same folder again) and the remembered albums link back up by path. Re-picking a folder you already have never duplicates albums; only new files are imported. **Forget** clears the remembered rack.
 
 With an empty library the page shows four generated demo albums, which have no audio; their playback is simulated.
 

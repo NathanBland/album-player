@@ -19,6 +19,10 @@
             <input type="search" id="rackSearch" placeholder="Search rack" aria-label="Search albums" autocomplete="off" spellcheck="false">
             <button class="pbtn rack-add" id="addBtn" aria-label="Add album folders" title="Add album folders">+</button>
           </div>
+          <div class="reconnect" id="reconnectBar" hidden>
+            <button class="pbtn accent" id="reconnectBtn">Reconnect folder</button>
+            <button class="pbtn" id="forgetBtn" title="Forget remembered albums">Forget</button>
+          </div>
           <div class="shelving" id="shelving" role="status" aria-live="polite" hidden>
             <div class="shelving-text"><span class="shelving-main" id="shelvingMain"></span><span class="shelving-sub" id="shelvingSub"></span></div>
             <div class="shelving-meter"><i id="shelvingBar"></i></div>

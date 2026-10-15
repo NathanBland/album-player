@@ -173,7 +173,7 @@ async function albumFromGroup(g,keepCover){
   }
 
   const tracks=its.map(it=>({
-    title:it.tags.title||it.title,artist:it.tags.artist,src:it.src,
+    title:it.tags.title||it.title,artist:it.tags.artist,src:it.src,path:it.path, // path: for relinking on a later visit
     number:it.tags.track??(g.kind==='folder'?leadingNumber(it.file):undefined),
     disc:it.tags.disc??(+(baseOf(it.folder.dir).match(DISC_DIR)?.[1])||undefined),
     _k:it.folder.dir+'/'+it.file,
@@ -254,7 +254,7 @@ export async function albumsFromEntries(entries,opts){
       meta:folderMeta(baseOf(home)||'Loose tracks',baseOf(parentOf(home))),
       cover:cover?{src:URL.createObjectURL(cover.file),named:cover.named}:null,
       overrides:{},
-      tracks:d.audio.sort((a,b)=>byName(a.name,b.name)).map(f=>({read:f,src:URL.createObjectURL(f),title:trackTitle(f.name),file:f.name})),
+      tracks:d.audio.sort((a,b)=>byName(a.name,b.name)).map(f=>({read:f,src:URL.createObjectURL(f),title:trackTitle(f.name),file:f.name,path:d.dir?`${d.dir}/${f.name}`:f.name})),
     });
   }
   return buildAlbums(folders,opts);
@@ -278,11 +278,57 @@ async function walk(entry,out){
   }
 }
 
+/* Entry lists carry .handles: the folders' FileSystemDirectoryHandles where the browser offers them
+   (Chromium), so they can be remembered and re-opened on a later visit with one permission click. */
 export async function entriesFromDrop(dt){
-  // Grab entries synchronously: the DataTransfer is emptied once the handler yields.
-  const roots=[...dt.items].map(i=>i.webkitGetAsEntry?.()).filter(Boolean);
-  if(!roots.length)return[...dt.files].map(file=>({file,path:file.name}));
+  // Grab entries (and handle promises) synchronously: the DataTransfer is emptied once the handler yields.
+  const items=[...dt.items];
+  const roots=items.map(i=>i.webkitGetAsEntry?.()).filter(Boolean);
+  const handlePs=items.map(i=>i.getAsFileSystemHandle?.()).filter(Boolean);
+  if(!roots.length)return Object.assign([...dt.files].map(file=>({file,path:file.name})),{handles:[]});
   const out=[];
   for(const e of roots)await walk(e,out);
+  out.handles=(await Promise.all(handlePs.map(p=>p.catch(()=>null)))).filter(h=>h?.kind==='directory');
   return out;
 }
+
+/* Walk a directory handle like the drop walker: [{file, path}] with paths starting at the folder's name. */
+export async function entriesFromHandle(dir,prefix=dir.name,out=[]){
+  for await(const h of dir.values()){
+    if(h.name.startsWith('.'))continue;
+    const path=`${prefix}/${h.name}`;
+    if(h.kind==='file')out.push({file:await h.getFile(),path});
+    else await entriesFromHandle(h,path,out);
+  }
+  return out;
+}
+
+/* The folder picker. Chromium's showDirectoryPicker hands back a rememberable handle; elsewhere the
+   caller falls back to <input webkitdirectory>. Resolves null when unsupported, [] when cancelled. */
+export const canPickHandles=typeof window.showDirectoryPicker==='function';
+export async function pickFolderWithHandle(){
+  if(!canPickHandles)return null;
+  let dir;
+  try{ dir=await window.showDirectoryPicker({id:'album-library',mode:'read'}); }
+  catch(err){ if(err.name==='AbortError')return Object.assign([],{handles:[]});throw err; }
+  return Object.assign(await entriesFromHandle(dir),{handles:[dir]});
+}
+
+/* Relink remembered tracks (path, no src) to freshly picked files. Returns the entries that matched
+   nothing remembered, so only those get imported as new albums: re-picking a known folder never
+   duplicates the rack. Images are always passed through, for new albums' covers. */
+export function relink(albums,entries){
+  const want=new Map();
+  for(const a of albums)for(const t of a.tracks)if(t.path&&!t.src)want.set(t.path,t);
+  const known=new Set();
+  for(const a of albums)for(const t of a.tracks)if(t.path)known.add(t.path);
+  let linked=0;const rest=[];
+  for(const e of entries){
+    const t=want.get(e.path);
+    if(t){ t.src=URL.createObjectURL(e.file);want.delete(e.path);linked++;continue; }
+    if(known.has(e.path)&&AUDIO_RE.test(e.file.name))continue; // already connected
+    rest.push(e);
+  }
+  return{linked,rest:Object.assign(rest,{handles:entries.handles||[]}),missing:want.size};
+}
+export const hasAudio=entries=>entries.some(e=>AUDIO_RE.test(e.file.name));

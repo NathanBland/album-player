@@ -2,7 +2,8 @@ import { clamp, analyze, inkFor } from './palette.js';
 import { drawDisc } from './disc.js';
 import { demoAlbums, loadImage, squareArt, placeholderArt } from './art.js';
 import { AudioEngine } from './audio.js';
-import { loadLibrary, albumsFromEntries, entriesFromInput, entriesFromDrop, pool } from './library.js';
+import { loadLibrary, albumsFromEntries, entriesFromInput, entriesFromDrop, entriesFromHandle, pickFolderWithHandle, canPickHandles, relink, hasAudio, pool } from './library.js';
+import { saveAlbum, loadAlbums, saveRoots, loadRoots, forgetAll } from './persist.js';
 import { decodeToWav } from './decoders.js';
 
 const $=(s,r=document)=>r.querySelector(s);
@@ -312,6 +313,9 @@ function setFeeding(on){
 function loadDisc(start=0){
   if(!(S.caseOpen&&S.disc==='case'))return;
   engine.unlock(); // inside the click, so the delayed play() below is allowed
+  if(!isDemo()&&!alb().tracks[start]?.src){ // remembered album, folder not connected yet
+    pendingLoad=start;note('Reconnect your music folder to play this album.');reconnect();return;
+  }
   S.disc='loading-in';S.ti=start;updateButtons();markNowPlaying();
   // start buffering (or decoding) while the motor draws the disc in
   if(!isDemo())alb().needsDecode?decodedUrl(track()).catch(()=>{}):engine.load(track().src);
@@ -359,7 +363,9 @@ async function selectAlbum(target){
 const rowOf=new Map(),albumOf=new WeakMap(); // album <-> its spine row
 const nudgeOf=a=>(a.title.length*7+a.artist.length*3)%7; // cases never sit perfectly flush
 function fillRow(row,a){
-  row.title=`${a.title} — ${a.artist}`;row.setAttribute('aria-label',`${a.title} by ${a.artist}`);
+  const off=isOffline(a);
+  row.classList.toggle('offline',off);
+  row.title=`${a.title} — ${a.artist}${off?' (folder not connected)':''}`;row.setAttribute('aria-label',`${a.title} by ${a.artist}${off?', folder not connected':''}`);
   const sp=row.firstElementChild;
   sp.style.setProperty('--dom',a.dom);sp.style.setProperty('--ink',a.ink);sp.style.setProperty('--nudge',`${nudgeOf(a)}px`);
   sp.children[0].textContent=a.title;sp.children[1].textContent=a.artist;sp.children[2].textContent=a.year||'';
@@ -389,7 +395,61 @@ function filterRack(){
 }
 rackEl.addEventListener('click',e=>{ const r=e.target.closest('.rack-row');if(r)selectAlbum(albumOf.get(r)); });
 rackSearch.addEventListener('input',filterRack);
-addBtn.addEventListener('click',()=>picker.click());
+addBtn.addEventListener('click',()=>pickFolder());
+
+/* ---------- remembered library: relink on a later visit ---------- */
+// A remembered album's tracks have paths but no src until its folder is picked (or re-granted) again.
+const isOffline=a=>!a.demo&&a.tracks.some(t=>t.path&&!t.src);
+const reconnectBar=$('#reconnectBar'),reconnectBtn=$('#reconnectBtn'),forgetBtn=$('#forgetBtn');
+let pendingLoad=null; // a Load disc (track index) waiting on reconnection
+function refreshOffline(){
+  for(const a of ALBUMS){ const row=rowOf.get(a);if(row)fillRow(row,a); }
+  const n=ALBUMS.filter(isOffline).length;
+  reconnectBar.hidden=!n;
+  reconnectBtn.textContent=canPickHandles?'Reconnect folder':'Choose folder';
+  reconnectBtn.title=`${n} album${n===1?'':'s'} remembered from your last visit: ${canPickHandles?'grant access to your music folder again':'choose your music folder again'} to play them`;
+}
+/* Picked or dropped files: relink remembered tracks first, then import only what's new. */
+async function importEntries(entries){
+  if(entries.handles?.length)saveRoots(entries.handles);
+  const{linked,rest}=relink(ALBUMS,entries);
+  if(linked){
+    refreshOffline();
+    note(`Reconnected ${nf.format(linked)} track${linked===1?'':'s'}.`);
+    if(pendingLoad!==null&&S.disc==='case'&&alb().tracks[pendingLoad]?.src){ const i=pendingLoad;pendingLoad=null;if(!S.caseOpen)setCaseOpen(true);loadDisc(i); }
+  }
+  if(hasAudio(rest))reportImport(await runImport(o=>albumsFromEntries(rest,o)));
+  else if(!linked)reportImport(0);
+}
+/* The + key: Chromium's folder picker returns a handle we can remember; elsewhere the hidden input. */
+function pickFolder(){
+  if(!canPickHandles){ picker.click();return; } // synchronously, inside the click
+  pickFolderWithHandle().then(entries=>{ if(entries?.length)return importEntries(entries); })
+    .catch(err=>{ console.warn(err);picker.click(); });
+}
+/* Must run inside a click: permission prompts and pickers need the user's gesture. */
+async function reconnect(){
+  if(!canPickHandles){ picker.click();return; } // Firefox/Safari: re-pick the same folder
+  let any=false;
+  for(const{handle}of await loadRoots()){
+    try{
+      let perm=await handle.queryPermission({mode:'read'});
+      if(perm!=='granted')perm=await handle.requestPermission({mode:'read'});
+      if(perm!=='granted')continue;
+      note(`Reading ${handle.name}\u2026`);
+      await importEntries(await entriesFromHandle(handle));any=true;
+    }catch(err){ console.warn('reconnect',handle.name,err); }
+  }
+  if(!any){ pickFolder();return; } // nothing remembered we can re-open: pick it again
+  const left=ALBUMS.filter(isOffline).length;
+  if(left)note(`${nf.format(left)} album${left===1?'':'s'} still need${left===1?'s':''} a folder (moved or from another folder). Use + to choose it.`);
+}
+reconnectBtn.addEventListener('click',reconnect);
+forgetBtn.addEventListener('click',async()=>{
+  if(!confirm('Forget the remembered albums? Your music files are not touched.'))return;
+  await forgetAll();
+  location.reload();
+});
 
 /* ---------- shelving: streamed-in albums slide into their slot ---------- */
 // Batched every ~120 ms. FLIP keeps it cheap: measure, insert, then animate transforms only.
@@ -498,9 +558,10 @@ async function runImport(start){
   const onProgress=p=>{ lastP=p;if(p.tracksTotal)showProgress(p,t0,added); };
   const onAlbum=async(raw,kind)=>{
     const id=`${run}\u0000${raw.id}`;
-    if(kind==='update'){ const p=await prepared.get(id);if(p)applyUpdate(p,raw);return; }
+    if(kind==='update'){ const p=await prepared.get(id);if(p){ applyUpdate(p,raw);saveAlbum(p); }return; }
     const pending=prepAlbum(raw);prepared.set(id,pending);
     const a=await pending;
+    saveAlbum(a); // remembered for next visit (user folders only; no audio is stored)
     if(!gate)gate=placeFirst(a); else{ await gate;shelve(a); }
     await gate;
     added++;showProgress(lastP,t0,added);
@@ -541,7 +602,7 @@ rail.addEventListener('keydown',e=>{
   else if(e.key==='End'){e.preventDefault();seekFrac(1);}
 });
 
-picker.addEventListener('change',async()=>{ const files=entriesFromInput(picker.files);picker.value='';reportImport(await runImport(o=>albumsFromEntries(files,o))); });
+picker.addEventListener('change',async()=>{ const files=entriesFromInput(picker.files);picker.value='';await importEntries(files); });
 
 let dragDepth=0;
 frame.addEventListener('dragenter',e=>{ if(![...e.dataTransfer.types].includes('Files'))return; e.preventDefault();dragDepth++;frame.classList.add('dragging'); });
@@ -550,7 +611,8 @@ frame.addEventListener('dragleave',()=>{ if(--dragDepth<=0){dragDepth=0;frame.cl
 frame.addEventListener('drop',async e=>{
   e.preventDefault();dragDepth=0;frame.classList.remove('dragging');
   const found=entriesFromDrop(e.dataTransfer); // must start inside the event: the DataTransfer empties after it
-  reportImport(await runImport(o=>found.then(entries=>albumsFromEntries(entries,o))));
+  note('Reading folders\u2026');
+  await importEntries(await found);
 });
 
 document.addEventListener('keydown',e=>{
@@ -639,13 +701,25 @@ function loop(t){
   updateButtons();
   note('Loading library\u2026');
   const n=await runImport(o=>loadLibrary(o));
-  if(!n){
+  // albums remembered from earlier visits (folders the user picked or dropped)
+  const ids=new Set(ALBUMS.map(a=>a.id));
+  const mem=sortAlbums(await prepAll((await loadAlbums()).filter(r=>!ids.has(r.id))));
+  if(mem.length){
+    const cur=n?alb():null;
+    ALBUMS=sortAlbums(ALBUMS.concat(mem));
+    S.ai=cur?ALBUMS.indexOf(cur):0;
+    if(!cur)P.pal=ALBUMS[0].pal.map(c=>c.slice());
+    renderRack();syncCase();setCaseOpen(false);
+  }else if(!n){
     ALBUMS=sortAlbums(await prepAll(demoAlbums()));
     P.pal=ALBUMS[0].pal.map(c=>c.slice());
     renderRack();syncCase();setCaseOpen(false);
   }
-  note(n
-    ?`${nf.format(n)} album${n>1?'s':''} in your library. Drop more folders onto the player or use + above the rack.`
-    :'Showing demo albums (no audio). Put album folders in <code>albums/</code> and reload, or drop folders onto the player.');
+  refreshOffline();
+  const how=canPickHandles?'Reconnect your music folder':'Choose your music folder again';
+  note(mem.length
+    ?`${nf.format(mem.length)} album${mem.length>1?'s':''} remembered from last time. ${how} to play ${mem.length>1?'them':'it'}.`
+    :n?`${nf.format(n)} album${n>1?'s':''} in your library. Drop more folders onto the player or use + above the rack.`
+    :'Showing demo albums (no audio). Drop a music folder onto the player, or use + above the rack.');
   ensureLoop();
 })();
