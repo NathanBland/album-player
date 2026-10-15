@@ -200,12 +200,12 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 .pbtn.accent{background:var(--accent);color:#1e120a}
 
 /* ---- device body ---- */
-.player-col{width:100%;max-width:500px}
+.player-col{--strip-w:74px;--disc:210px;position:relative;width:100%;max-width:500px;margin-top:22px} /* headroom for a disc standing in the slot */ /* --disc: 84% of the 250px deck */
 .device{display:flex;border-radius:14px;overflow:hidden;background:var(--body);
   box-shadow:0 1px 0 var(--body-hi) inset,0 -1px 0 var(--body-lo) inset,0 24px 44px -12px var(--shadow),0 4px 10px var(--shadow)}
-.device-main{flex:1;min-width:0;padding:16px;
+.device-main{position:relative;flex:1;min-width:0;padding:16px;
   background:linear-gradient(180deg,var(--body-hi),var(--body) 30%,var(--body))}
-.strip{flex:0 0 74px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:18px;
+.strip{flex:0 0 var(--strip-w);display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:18px;
   padding:22px 0 18px;background:var(--strip);box-shadow:inset 1px 0 0 var(--seam),inset 2px 0 0 rgba(255,255,255,.05)}
 
 /* ---- deck + LCD (unchanged screen parts) ---- */
@@ -214,14 +214,21 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 .deck-glass{position:absolute;inset:6px;border-radius:6px;background:
   radial-gradient(circle at 50% 38%,rgba(var(--a1),.1),transparent 65%);
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
-.tray-shelf{position:absolute;left:50%;bottom:-18px;width:200px;height:14px;border-radius:3px;
-  background:linear-gradient(180deg,#1c2e38,#0b151b);transform:translate(-50%,0);
-  transition:bottom .6s cubic-bezier(.22,.9,.3,1), box-shadow .3s}
-.tray-shelf.out{bottom:62px;box-shadow:0 10px 18px rgba(0,0,0,.4)}
 .player-cd-wrap{position:absolute;height:84%;aspect-ratio:1;left:50%;top:50%;
-  transform:translate(-50%,-50%) scale(.2);opacity:0;pointer-events:none;
-  transition:transform .55s cubic-bezier(.22,.9,.3,1), opacity .4s}
-.player-cd-wrap.shown{transform:translate(-50%,-50%) scale(1);opacity:1}
+  transform:translate(-50%,-50%);opacity:0;pointer-events:none}
+.player-cd-wrap.shown{opacity:1}
+/* slot loader: a slit in the top of the body, right over the deck window. The disc stands in it, partly out,
+   and the motor draws it down; .slot-feed is the part still outside, clipped at the slit. */
+.disc-slot{position:absolute;top:5px;left:calc(16px + (100% - 32px) / 2);width:calc(var(--disc) + 14px);height:5px;transform:translateX(-50%);
+  border-radius:3px;background:linear-gradient(180deg,#050505,#1e1c1a);
+  box-shadow:inset 0 2px 2px rgba(0,0,0,.8),0 1px 0 var(--body-hi),0 -1px 0 var(--body-lo)}
+.disc-slot::after{content:"";position:absolute;left:8px;right:8px;bottom:1px;height:1px;border-radius:1px;background:var(--accent);
+  opacity:0;transition:opacity .25s} /* the drive light inside the slit, on while the motor runs */
+.device.feeding .disc-slot::after{opacity:.75}
+.slot-feed{position:absolute;bottom:calc(100% - 8px);left:16px;right:calc(var(--strip-w) + 16px);height:72px;
+  overflow:hidden;pointer-events:none;z-index:2;visibility:hidden}
+.slot-feed.feeding{visibility:visible}
+.slot-feed canvas{position:absolute;left:50%;top:calc(100% - 44px);width:var(--disc);height:var(--disc);margin-left:calc(var(--disc) / -2)} /* 44px stands out of the slot */
 .player-cd-wrap canvas{width:100%;height:100%;display:block}
 .deck-empty{position:absolute;font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;color:var(--s-muted);
   text-transform:uppercase;opacity:.6;transition:opacity .3s}
@@ -246,7 +253,7 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 .lcd-title.scroll .lcd-marquee{animation:lcd-marquee var(--dur,10s) linear infinite}
 .lcd-title.scroll .lcd-marquee>span{padding-right:3em}
 @keyframes lcd-marquee{0%,18%{transform:translateX(0)}100%{transform:translateX(calc(-1 * var(--loop,0px)))}}
-/* segment-style blink: elapsed time while paused, the status word while the tray moves */
+/* segment-style blink: elapsed time while paused, the status word while the disc moves through the slot */
 .lcd .blink{animation:lcd-blink 1s step-end infinite}
 @keyframes lcd-blink{50%{opacity:.12}}
 .lcd-rail{position:relative;height:3px;margin-top:10px;border-radius:2px;background:rgba(159,232,176,.14);cursor:pointer;touch-action:none}
@@ -313,5 +320,5 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 
 @media (max-width:760px){ .scene{grid-template-columns:1fr} .rack-col{min-height:0;height:290px} }
 @media (max-width:480px){ .case-area{--cw:150px} .liner{padding:8px 7px 7px 9px} }
-@media (max-width:420px){ .strip{flex-basis:62px} .slots{padding:0 6px} .slot i{width:22px} }
-@media (prefers-reduced-motion:reduce){ .case-front,.case-stage,.spine,.player-cd-wrap,.tray-shelf{transition:none!important} .lcd-title.scroll .lcd-marquee{animation:none} .lcd .blink{animation:none;opacity:.55} }
+@media (max-width:420px){ .player-col{--strip-w:62px} .slots{padding:0 6px} .slot i{width:22px} }
+@media (prefers-reduced-motion:reduce){ .case-front,.case-stage,.spine,.disc-slot::after{transition:none!important} .lcd-title.scroll .lcd-marquee{animation:none} .lcd .blink{animation:none;opacity:.55} }

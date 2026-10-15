@@ -57,12 +57,13 @@
       </div>
 
       <div class="player-col">
-        <div class="device">
+        <div class="slot-feed" id="slotFeed" aria-hidden="true"><canvas id="feedCd"></canvas></div>
+        <div class="device" id="device">
          <div class="device-main">
+          <div class="disc-slot" aria-hidden="true"></div>
           <div class="deck">
             <div class="deck-glass"></div>
             <span class="deck-empty" id="deckEmpty">No disc loaded</span>
-            <div class="tray-shelf" id="tray"></div>
             <div class="player-cd-wrap" id="playerCdWrap"><canvas id="playerCd"></canvas></div>
           </div>
           <div class="lcd">

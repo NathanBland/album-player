@@ -143,7 +143,7 @@ const frame=$('#frame'),caseArea=$('#caseArea'),caseEl=$('#case'),caseImg=$('#ca
 const liner=$('#liner'),trayCard=$('#trayCard'),traySpine=$('#traySpine');
 const rackEl=$('#rack'),rackSearch=$('#rackSearch'),rackEmpty=$('#rackEmpty'),addBtn=$('#addBtn');
 const toggleCaseBtn=$('#toggleCase'),loadBtn=$('#loadBtn');
-const tray=$('#tray'),playerCdWrap=$('#playerCdWrap'),playerCd=$('#playerCd'),deckEmpty=$('#deckEmpty');
+const device=$('#device'),slotFeed=$('#slotFeed'),feedCd=$('#feedCd'),playerCdWrap=$('#playerCdWrap'),playerCd=$('#playerCd'),deckEmpty=$('#deckEmpty');
 const lcdTitle=$('#lcdTitle'),lcdTime=$('#lcdTime'),lcdTrack=$('#lcdTrack'),lcdBars=$('#lcdBars');
 const tot=$('#tot'),fill=$('#fill'),rail=$('#rail');
 const playBtn=$('#play'),playicon=$('#playicon'),prevBtn=$('#prev'),nextBtn=$('#next'),ejectBtn=$('#eject');
@@ -290,25 +290,52 @@ function updateButtons(){
   deckEmpty.classList.toggle('hide',S.disc!=='case');
   caseCdWrap.classList.toggle('gone',S.disc!=='case');
 }
+/* ---------- slot loader ----------
+   One disc, drawn twice: the part still standing out of the slit (feedCd, clipped at the slit) and the part
+   inside the deck window (playerCd). Both move by the same y, so the disc reads as one object sliding through.
+   y = 0: resting in the slot, partly out. y = travel: centered in the deck. */
+const MOTOR='cubic-bezier(.45,0,.2,1)',LIFT=18;
+let slotTravel=0;
+function measureSlot(){
+  for(const n of[feedCd,playerCdWrap])n.getAnimations().forEach(a=>a.cancel());
+  const f=feedCd.getBoundingClientRect(),d=playerCdWrap.getBoundingClientRect();
+  slotTravel=(d.top+d.height/2)-(f.top+f.height/2);
+}
+function moveDisc(frames,opts){
+  feedCd.animate(frames.map(({y,o=1})=>({transform:`translateY(${y}px)`,opacity:o})),opts);
+  playerCdWrap.animate(frames.map(({y,o=1})=>({transform:`translate(-50%,calc(-50% + ${y-slotTravel}px))`,opacity:o})),opts);
+}
+function setFeeding(on){
+  slotFeed.classList.toggle('feeding',on);device.classList.toggle('feeding',on);
+  if(!on)for(const n of[feedCd,playerCdWrap])n.getAnimations().forEach(a=>a.cancel());
+}
 function loadDisc(start=0){
   if(!(S.caseOpen&&S.disc==='case'))return;
   engine.unlock(); // inside the click, so the delayed play() below is allowed
   S.disc='loading-in';S.ti=start;updateButtons();markNowPlaying();
-  // start buffering (or decoding) during the tray animation
+  // start buffering (or decoding) while the motor draws the disc in
   if(!isDemo())alb().needsDecode?decodedUrl(track()).catch(()=>{}):engine.load(track().src);
-  tray.classList.add('out');
-  setTimeout(()=>{ playerCdWrap.classList.add('shown'); },260);
-  setTimeout(()=>{ tray.classList.remove('out'); },620);
-  setTimeout(()=>{ S.disc='player';updateButtons();cue(true); },900);
+  playerCdWrap.classList.add('shown');
+  if(!reduceMotion.matches){
+    measureSlot();setFeeding(true);
+    moveDisc([{y:-LIFT,o:0},{y:0}],{duration:220,easing:'cubic-bezier(.16,1,.3,1)'});   // set into the slot
+    moveDisc([{y:0},{y:slotTravel}],{duration:640,delay:240,easing:MOTOR,fill:'both'}); // drawn in and centered
+    setTimeout(()=>setFeeding(false),900);
+  }
+  setTimeout(()=>{ S.disc='player';updateButtons();cue(true); },reduceMotion.matches?300:900);
 }
 function ejectDisc(){
   if(S.disc!=='player')return Promise.resolve();
   cueToken++;pause();S.playing=false;S.wantPlay=false;S.decoding=false;S.disc='loading-out';updateButtons();
   if(!isDemo())engine.unload();
-  tray.classList.add('out');
-  setTimeout(()=>{ playerCdWrap.classList.remove('shown'); },80);
-  setTimeout(()=>{ tray.classList.remove('out'); },460);
-  return wait(760).then(()=>{ S.disc='case';setCaseOpen(true);markNowPlaying();clearMediaSession(); });
+  if(reduceMotion.matches){ playerCdWrap.classList.remove('shown'); }
+  else{
+    measureSlot();setFeeding(true);
+    moveDisc([{y:slotTravel},{y:0}],{duration:580,easing:MOTOR,fill:'forwards'});            // pushed back out of the slot
+    moveDisc([{y:0},{y:-LIFT,o:0}],{duration:200,delay:640,easing:'cubic-bezier(.5,0,.75,0)',fill:'forwards'}); // lifted away
+    setTimeout(()=>{ playerCdWrap.classList.remove('shown');setFeeding(false); },840);
+  }
+  return wait(reduceMotion.matches?300:860).then(()=>{ S.disc='case';setCaseOpen(true);markNowPlaying();clearMediaSession(); });
 }
 /* Swap albums like a real shelf: eject, close the case, slide it back into the rack, pull the new one out. */
 let switching=false;
@@ -575,11 +602,12 @@ function loop(t){
 
   drawDisc(caseCd,a,P.pal,S.clock*0.3,t/1000*0.6,0.1);
   const spinTarget=spin?SPIN_RATE:0;
-  if(S.disc!=='player'||reduceMotion.matches)discVel=spinTarget; // no coasting in or out of the tray
+  if(S.disc!=='player'||reduceMotion.matches)discVel=spinTarget; // no coasting in or out of the slot
   else discVel+=(spinTarget-discVel)*Math.min(1,dt*(spin?SPIN_UP:SPIN_DOWN));
   if(discVel<.01&&!spin)discVel=0;
   discAngle=(discAngle+discVel*dt)%(Math.PI*2);
   drawDisc(playerCd,a,P.pal,discAngle,t/1000*0.6,A.level);
+  if(slotFeed.classList.contains('feeding'))drawDisc(feedCd,a,P.pal,discAngle,t/1000*0.6,A.level);
   bars.forEach((b,i)=>{
     let v=.03;
     if(spin)v=bands?bands[i]:clamp(A.level*(.5+.5*(1-Math.abs(i-7.5)/7.5))+Math.sin(t/120+i)*.08,0,1);
@@ -590,7 +618,7 @@ function loop(t){
 
   const inPlayer=S.disc==='player';
   const cur=inPlayer?now():0,len=inPlayer?length():0;
-  // like the firmware on a real deck: READING while the tray draws the disc in, OPEN while it ejects
+  // like the firmware on a real deck: READING while the slot draws the disc in, OPEN while it ejects
   setLcdTitle(inPlayer?track().title:S.disc==='loading-in'?'READING':S.disc==='loading-out'?'OPEN':'\u2014');
   const trk=inPlayer?'TRK '+String(S.ti+1).padStart(2,'0')+'/'+String(a.tracks.length).padStart(2,'0'):'TRK --/--';
   lcdTrack.textContent=t<volShownUntil?'VOL '+String(Math.round(engine.volume*100)).padStart(3,'\u00a0')
