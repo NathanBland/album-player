@@ -10,6 +10,7 @@ Run directly to write albums/library.json (for static hosting); serve.py
 calls scan() on every request so new folders show up on reload.
 """
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -69,7 +70,10 @@ def scan():
     if not ALBUMS.is_dir():
         return []
     albums = []
-    for d in sorted([ALBUMS, *ALBUMS.rglob("*")], key=lambda p: natural_key(p.as_posix())):
+    # os.walk(followlinks=True): a library symlinked into albums/ (e.g. a NAS share) is scanned too;
+    # Path.rglob skips symlinked folders before Python 3.13.
+    walked = [Path(r) for r, ds, _ in os.walk(ALBUMS, followlinks=True) if not ds.sort()]
+    for d in sorted(walked, key=lambda p: natural_key(p.as_posix())):
         if not d.is_dir() or any(part.startswith(".") for part in d.relative_to(ROOT).parts):
             continue
         try:

@@ -88,7 +88,9 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 .reconnect[hidden]{display:none}
 .reconnect .pbtn{white-space:nowrap}
 .reconnect .accent{flex:1;text-align:center}
-.rack-row.offline .spine{filter:saturate(.5) brightness(.82)}
+.rack-row.offline .spine{ /* mixed toward the rack's wood, not filter(): a filter gives each of hundreds of
+  spines its own offscreen surface, which made the slot animation stutter in Firefox */
+  background:color-mix(in srgb,rgb(var(--dom)) 55%,#2b1a0e);color:color-mix(in srgb,rgb(var(--ink)) 62%,#2b1a0e)}
 /* import progress: a small plaque above the rack while albums stream onto the shelf */
 .shelving{display:grid;gap:6px;padding:8px 10px 9px;border-radius:5px;background:var(--key);color:var(--key-fg);
   box-shadow:0 1px 0 var(--key-line),0 2px 4px var(--shadow),inset 0 1px 0 rgba(255,255,255,.12);transition:opacity .45s}
@@ -234,8 +236,9 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 /* lit states */
 .pbtn.lit-green::before,#toggleCase[data-on="true"]::before{background:var(--led-green);box-shadow:0 0 6px var(--led-green),0 0 2px var(--led-green)}
 #loadBtn:not(:disabled)::before,.pbtn.lit-amber::before{background:#fff1c9;box-shadow:0 0 6px var(--led-amber),0 0 2px var(--led-amber)}
-#reconnectBtn::before{background:#fff1c9;box-shadow:0 0 7px var(--led-amber);animation:led-attn 1.6s ease-in-out infinite}
-@keyframes led-attn{50%{background:rgba(70,22,0,.5);box-shadow:none}}
+#reconnectBtn::before{background:#fff1c9;box-shadow:0 0 7px var(--led-amber);animation:led-attn 1.6s ease-in-out 3}
+@keyframes led-attn{50%{opacity:.2}} /* three pulses, then steady: a never-ending CSS animation costs a style pass
+   every frame in Firefox, which made the slot animation stutter */
 
 /* ---- device body ---- */
 .player-col{--strip-w:74px;--disc:210px;position:relative;width:100%;max-width:500px;margin-top:22px} /* headroom for a disc standing in the slot */ /* --disc: 84% of the 250px deck */
@@ -281,14 +284,18 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 .lcd-row2{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-family:var(--mono);
   font-size:.65rem;color:#6fae7e;letter-spacing:.1em}
 .lcd-bars{display:flex;gap:3px;align-items:flex-end;height:16px}
-.lcd-bars b{width:3px;background:#9fe8b0;box-shadow:0 0 6px rgba(159,232,176,.6);border-radius:1px;height:10%}
+.lcd-bars b{width:3px;background:#9fe8b0;box-shadow:0 0 6px rgba(159,232,176,.6);border-radius:1px;height:100%;
+  transform-origin:50% 100%;transform:scaleY(.1);will-change:transform} /* JS scales it: no layout per frame */
 .lcd-tot{opacity:.5;font-size:.9em}
 /* long titles scroll like a CD player display: hold at the start, then loop through a gap */
 .lcd-marquee{display:inline-block;white-space:nowrap}
-.lcd-title.scroll{text-overflow:clip;
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 4px,#000 calc(100% - 16px),transparent);
-          mask-image:linear-gradient(90deg,transparent,#000 4px,#000 calc(100% - 16px),transparent)}
-.lcd-title.scroll .lcd-marquee{animation:lcd-marquee var(--dur,10s) linear infinite}
+.lcd-title.scroll{text-overflow:clip;position:relative}
+/* edge fades as overlays in the LCD's color, not mask-image: a masked box repaints every frame while its
+   text scrolls (notably in Firefox); this way the scrolling text is a plain transform on the compositor */
+.lcd-title.scroll::before,.lcd-title.scroll::after{content:"";position:absolute;top:0;bottom:0;z-index:1;pointer-events:none}
+.lcd-title.scroll::before{left:0;width:4px;background:linear-gradient(90deg,#06100a,rgba(6,16,10,0))}
+.lcd-title.scroll::after{right:0;width:16px;background:linear-gradient(270deg,#06100a,rgba(6,16,10,0))}
+.lcd-title.scroll .lcd-marquee{animation:lcd-marquee var(--dur,10s) linear infinite;will-change:transform}
 .lcd-title.scroll .lcd-marquee>span{padding-right:3em}
 @keyframes lcd-marquee{0%,18%{transform:translateX(0)}100%{transform:translateX(calc(-1 * var(--loop,0px)))}}
 /* segment-style blink: elapsed time while paused, the status word while the disc moves through the slot */
@@ -296,7 +303,7 @@ main{max-width:1040px;margin:0 auto;padding:clamp(16px,4vw,40px) clamp(16px,4vw,
 @keyframes lcd-blink{50%{opacity:.12}}
 .lcd-rail{position:relative;height:3px;margin-top:10px;border-radius:2px;background:rgba(159,232,176,.14);cursor:pointer;touch-action:none}
 .lcd-rail::before{content:"";position:absolute;inset:-8px 0} /* bigger hit area */
-.lcd-rail .fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:2px;background:#9fe8b0;box-shadow:0 0 6px rgba(159,232,176,.6)}
+.lcd-rail .fill{position:absolute;left:0;top:0;bottom:0;width:100%;transform-origin:0 50%;transform:scaleX(0);border-radius:2px;background:#9fe8b0;box-shadow:0 0 6px rgba(159,232,176,.6)}
 .lcd-rail:focus-visible{outline:1px solid #9fe8b0;outline-offset:4px}
 
 /* ---- slot keys on the strip ---- */

@@ -644,6 +644,12 @@ let last=performance.now();
 // The player's disc has inertia: it spins up when play starts and coasts down on pause (rad/s).
 const SPIN_RATE=4.2,SPIN_UP=2.4,SPIN_DOWN=1.1;
 let discAngle=0,discVel=0;
+/* Write-if-changed helpers: the loop runs every frame, but most of what it shows changes rarely.
+   Rewriting identical text/styles still costs style, layout and paint, which adds up on phones. */
+const setText=(el,v)=>{ if(el._v!==v){ el._v=v;el.textContent=v; } };
+const setStyle=(el,prop,v)=>{ const k='_'+prop;if(el[k]!==v){ el[k]=v;el.style.setProperty(prop,v); } };
+const setAttr=(el,name,v)=>{ const k='_a'+name;if(el[k]!==v){ el[k]=v;el.setAttribute(name,v); } };
+const rootEl=document.documentElement;
 function loop(t){
   const dt=Math.min(.05,(t-last)/1000);last=t;
   const a=alb();
@@ -662,39 +668,44 @@ function loop(t){
   }
   A.level+=(target-A.level)*Math.min(1,dt*8);
 
-  drawDisc(caseCd,a,P.pal,S.clock*0.3,t/1000*0.6,0.1);
+  // the case's disc only shows with the case open and the disc in it (the closed cover hides it)
+  if(S.disc==='case'&&S.caseOpen)drawDisc(caseCd,a,P.pal,S.clock*0.3,t/1000*0.6,0.1);
   const spinTarget=spin?SPIN_RATE:0;
   if(S.disc!=='player'||reduceMotion.matches)discVel=spinTarget; // no coasting in or out of the slot
   else discVel+=(spinTarget-discVel)*Math.min(1,dt*(spin?SPIN_UP:SPIN_DOWN));
   if(discVel<.01&&!spin)discVel=0;
   discAngle=(discAngle+discVel*dt)%(Math.PI*2);
-  drawDisc(playerCd,a,P.pal,discAngle,t/1000*0.6,A.level);
+  if(S.disc!=='case')drawDisc(playerCd,a,P.pal,discAngle,t/1000*0.6,A.level); // no disc in the deck: nothing to draw
   if(slotFeed.classList.contains('feeding'))drawDisc(feedCd,a,P.pal,discAngle,t/1000*0.6,A.level);
+  // meter: scaleY on the compositor instead of height (which re-lays out the LCD every frame)
   bars.forEach((b,i)=>{
     let v=.03;
     if(spin)v=bands?bands[i]:clamp(A.level*(.5+.5*(1-Math.abs(i-7.5)/7.5))+Math.sin(t/120+i)*.08,0,1);
-    b.style.height=(8+v*92)+'%';
+    setStyle(b,'transform',`scaleY(${(.08+v*.92).toFixed(3)})`);
   });
-  const root=document.documentElement.style;
-  P.pal.forEach((c,i)=>root.setProperty(`--a${i+1}`,`${c[0]|0},${c[1]|0},${c[2]|0}`));
+  // cover colors: every element inherits these, so only touch them while they're actually changing
+  P.pal.forEach((c,i)=>setStyle(rootEl,`--a${i+1}`,`${c[0]|0},${c[1]|0},${c[2]|0}`));
 
   const inPlayer=S.disc==='player';
   const cur=inPlayer?now():0,len=inPlayer?length():0;
   // like the firmware on a real deck: READING while the slot draws the disc in, OPEN while it ejects
   setLcdTitle(inPlayer?track().title:S.disc==='loading-in'?'READING':S.disc==='loading-out'?'OPEN':'\u2014');
   const trk=inPlayer?'TRK '+String(S.ti+1).padStart(2,'0')+'/'+String(a.tracks.length).padStart(2,'0'):'TRK --/--';
-  lcdTrack.textContent=t<volShownUntil?'VOL '+String(Math.round(engine.volume*100)).padStart(3,'\u00a0')
-    :S.decoding?trk+' \u00b7 DECODING':trk;
+  setText(lcdTrack,t<volShownUntil?'VOL '+String(Math.round(engine.volume*100)).padStart(3,'\u00a0')
+    :S.decoding?trk+' \u00b7 DECODING':trk);
   lcdTitle.classList.toggle('blink',S.disc==='loading-in'||S.disc==='loading-out');
   lcdTime.classList.toggle('blink',inPlayer&&!spin&&!S.decoding&&cur>0); // paused, not stopped
   playBtn.classList.toggle('on',spin);
-  lcdTime.textContent=!inPlayer?'00:00':S.decoding?'--:--':fmt(cur);
-  tot.textContent=inPlayer&&len?fmt(len):'00:00';
+  setText(lcdTime,!inPlayer?'00:00':S.decoding?'--:--':fmt(cur));
+  setText(tot,inPlayer&&len?fmt(len):'00:00');
   const pct=len?cur/len*100:0;
-  fill.style.width=pct+'%';rail.setAttribute('aria-valuenow',Math.round(pct));
-  playicon.setAttribute('d',spin?'M6 5h4v14H6zM14 5h4v14h-4z':'M7 4.5v15l12-7.5z');
+  setStyle(fill,'transform',`scaleX(${(pct/100).toFixed(4)})`);setAttr(rail,'aria-valuenow',String(Math.round(pct)));
+  setAttr(playicon,'d',spin?'M6 5h4v14H6zM14 5h4v14h-4z':'M7 4.5v15l12-7.5z');
   requestAnimationFrame(loop);
 }
+
+/* ---------- diagnostics: add ?perf to the URL ---------- */
+if(new URLSearchParams(location.search).has('perf'))import('./perf.js').then(m=>m.startPerf(()=>engine.el));
 
 /* ---------- boot ---------- */
 (async()=>{
