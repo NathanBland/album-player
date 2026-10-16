@@ -6,8 +6,11 @@ Each directory under albums/ that contains audio files becomes one folder record
 carry what tags can't: folder-name fallbacks ("Artist - Album (2024)"), the folder's cover image, and
 album.json overrides (title/artist/year). A "Disc N" folder takes its name and cover from its parent.
 
-Run directly to write albums/library.json (for static hosting); serve.py
-calls scan() on every request so new folders show up on reload.
+The library lives in albums/ by default; set MUSIC_DIR to scan a folder anywhere else (the Docker
+image mounts the collection at /music). Track URLs are always "albums/<path inside the library>",
+and serve.py maps that URL prefix onto MUSIC_DIR.
+
+Run directly to write library.json into the library folder (for static hosting).
 """
 import json
 import os
@@ -17,7 +20,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parent.parent
-ALBUMS = ROOT / "albums"
+ALBUMS = Path(os.environ.get("MUSIC_DIR") or ROOT / "albums")
 AUDIO = {".mp3", ".m4a", ".aac", ".flac", ".wav", ".aiff", ".aif", ".ogg", ".oga", ".opus", ".webm"}
 IMAGES = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 COVER_NAMES = ["cover", "folder", "front", "album", "art"]
@@ -47,7 +50,7 @@ def parse_folder(name):
 
 
 def url(path):
-    return quote(path.relative_to(ROOT).as_posix())
+    return "albums/" + quote(path.relative_to(ALBUMS).as_posix())
 
 
 def pick_cover(images):
@@ -74,7 +77,7 @@ def scan():
     # Path.rglob skips symlinked folders before Python 3.13.
     walked = [Path(r) for r, ds, _ in os.walk(ALBUMS, followlinks=True) if not ds.sort()]
     for d in sorted(walked, key=lambda p: natural_key(p.as_posix())):
-        if not d.is_dir() or any(part.startswith(".") for part in d.relative_to(ROOT).parts):
+        if not d.is_dir() or any(part.startswith(".") for part in d.relative_to(ALBUMS).parts):
             continue
         try:
             files = sorted((f for f in d.iterdir() if f.is_file() and not f.name.startswith(".")), key=lambda f: natural_key(f.name))
@@ -119,4 +122,4 @@ if __name__ == "__main__":
     ALBUMS.mkdir(exist_ok=True)
     found = scan()
     (ALBUMS / "library.json").write_text(json.dumps({"albums": found}, indent=2))
-    print(f"Wrote albums/library.json with {len(found)} album(s).")
+    print(f"Wrote {ALBUMS / 'library.json'} with {len(found)} album(s).")

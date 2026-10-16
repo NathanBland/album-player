@@ -1,0 +1,9 @@
+# Only the app ships in the image (the Dockerfile copies explicit paths; this keeps the build context small)
+.git
+.claude
+albums
+**/__pycache__
+**/*.pyc
+**/.DS_Store
+*.md
+docker-compose*.yml
