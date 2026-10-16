@@ -40,6 +40,8 @@ docker run -d --name album-player -p 5173:5173 -v /path/to/your/music:/music:ro 
 
 Or with Compose: edit the music path in `docker-compose.yml`, then `docker compose up -d`.
 
+**Verify the image.** `scripts/check-image.sh` builds it with Apple's [`container`](https://github.com/apple/container) (macOS 26 on Apple silicon) or Docker, whichever is installed, starts it with a throwaway music folder, and checks the app, the library scan, Range requests, the health check, no directory listings and the unprivileged user, then cleans up. `--multiarch` also builds linux/amd64, `--keep` keeps the image, and `--local` runs the same checks against `scripts/serve.py` with no image.
+
 **Portainer.** Either create a stack from this Git repository (*Stacks → Add stack → Repository*, compose path `docker-compose.yml`), which builds the image on your host; or, once the repository is on GitHub, use the image the included workflow (`.github/workflows/docker.yml`) publishes for amd64 and arm64 on every push to `main`, and paste this into the web editor:
 
 ```yaml
