@@ -19,18 +19,30 @@ Every option can also come from the environment (the Docker image sets these):
 import argparse
 import json
 import os
+import posixpath
 import re
 import sys
 import threading
 import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
+from urllib.parse import unquote
 
 sys.path.insert(0, os.path.dirname(__file__))
 import scan_library  # noqa: E402
 from scan_library import ROOT  # noqa: E402
 
 RANGE_RE = re.compile(r"bytes=(\d*)-(\d*)$")
+# Only the app and the music are served, never the rest of the checkout (.git, scripts, ...)
+PUBLIC_FILES = ("/", "/index.html")
+PUBLIC_DIRS = ("/css/", "/js/", "/vendor/", "/albums/")
+
+
+def is_public(url_path):
+    """True for the app's own files and the music; checked after decoding and resolving '..'."""
+    p = posixpath.normpath(unquote(url_path))
+    p = p + "/" if p != "/" and url_path.endswith("/") else p
+    return p in PUBLIC_FILES or p.startswith(PUBLIC_DIRS)
 
 
 class Library:
@@ -115,6 +127,10 @@ class Handler(SimpleHTTPRequestHandler):
             return self._send_bytes(b"ok\n", "text/plain")
         if path == "/albums/library.json":
             return self._send_bytes(self.library.get(force="rescan=1" in query), "application/json")
+
+        if not is_public(path):
+            self.send_error(404, "Not found")
+            return None
 
         rng = self.headers.get("Range")
         fs_path = self.translate_path(self.path)

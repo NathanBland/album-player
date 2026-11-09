@@ -93,6 +93,7 @@ if [ -n "$SRC" ]; then
 fi
 [ "$(code "$B/albums/")" = 404 ] && ok "no directory listing" || fail "directory listing is exposed"
 [ "$(code --path-as-is "$B/albums/../../../../etc/passwd")" = 404 ] && ok "path traversal blocked" || fail "path traversal"
+[ "$(code "$B/scripts/serve.py")" = 404 ] && [ "$(code --path-as-is "$B/js/../scripts/serve.py")" = 404 ] && ok "only app files served" || fail "files outside the app are served"
 
 if [ $RT != local ]; then
   U=$($RT exec "$NAME" id -u 2>/dev/null | tr -d '\r' || true)

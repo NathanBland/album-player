@@ -651,12 +651,12 @@ const setStyle=(el,prop,v)=>{ const k='_'+prop;if(el[k]!==v){ el[k]=v;el.style.s
 const setAttr=(el,name,v)=>{ const k='_a'+name;if(el[k]!==v){ el[k]=v;el.setAttribute(name,v); } };
 const rootEl=document.documentElement;
 function loop(t){
-  const dt=Math.min(.05,(t-last)/1000);last=t;
+  const raw=(t-last)/1000,dt=Math.min(.05,raw);last=t; // dt is capped for smooth motion; the demo clock keeps real time
   const a=alb();
   const spin=S.playing&&S.disc==='player';
   if(spin){
     S.clock+=dt;
-    if(a.demo){ S.t+=dt; if(S.t>=track().duration)nextTrack(); }
+    if(a.demo){ S.t+=Math.min(raw,1); if(S.t>=track().duration)nextTrack(); }
   }
   const k=Math.min(1,dt*5);
   for(let i=0;i<3;i++)for(let j=0;j<3;j++)P.pal[i][j]+=(a.pal[i][j]-P.pal[i][j])*k;
