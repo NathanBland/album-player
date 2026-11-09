@@ -4,13 +4,27 @@ A jewel-case CD player for your own music. Open the case, load the disc, press p
 
 No build step and no dependencies: plain ES modules plus a small Python server.
 
+![The player with a demo album loaded: CD rack on the left, the open jewel case with its track list, and the deck playing the disc](docs/screenshot.png)
+
+Your music never leaves your machine. The app makes no requests beyond your own server, has no analytics, and only reads your files.
+
 ## Run
 
+Python 3 and nothing else to install:
+
 ```bash
+git clone https://github.com/NathanBland/album-player.git
+cd album-player
 python3 scripts/serve.py
 ```
 
-Then open http://localhost:5173.
+Then open http://localhost:5173. With nothing in `albums/` you get a few demo albums; see [Adding music](#adding-music) for your own.
+
+Or run the published image (amd64 and arm64):
+
+```bash
+docker run -d --name album-player -p 5173:5173 -v /path/to/your/music:/music:ro ghcr.io/nathanbland/album-player:latest
+```
 
 The server exists because `python3 -m http.server` doesn't answer HTTP Range requests, which Safari needs to play audio and every browser needs to seek.
 
@@ -24,11 +38,13 @@ Options (flags or environment variables):
 | `--rescan` | `RESCAN_SECONDS` | `0` | `0`: rescan the library on every page load. `N`: scan once in the background, cache it, refresh every N seconds. `/albums/library.json?rescan=1` forces a rescan. |
 | `--quiet` | `QUIET` | off | log only errors |
 
-`/healthz` answers `ok` without touching the library. The server never lists directories.
+`/healthz` answers `ok` without touching the library. The server only serves the app and your music folder, and never lists directories. It has no authentication, so put it behind a reverse proxy with access control before exposing it beyond your network.
 
 ## Docker
 
 The image is the app plus the same server (Python standard library only, no dependencies). Mount your collection read-only at `/music`; the library is scanned in the background at startup and refreshed every 10 minutes.
+
+To build it yourself instead of using `ghcr.io/nathanbland/album-player`:
 
 ```bash
 docker build -t album-player .
@@ -42,12 +58,12 @@ Or with Compose: edit the music path in `docker-compose.yml`, then `docker compo
 
 **Verify the image.** `scripts/check-image.sh` builds it with Apple's [`container`](https://github.com/apple/container) (macOS 26 on Apple silicon) or Docker, whichever is installed, starts it with a throwaway music folder, and checks the app, the library scan, Range requests, the health check, no directory listings and the unprivileged user, then cleans up. `--multiarch` also builds linux/amd64, `--keep` keeps the image, and `--local` runs the same checks against `scripts/serve.py` with no image.
 
-**Portainer.** Either create a stack from this Git repository (*Stacks → Add stack → Repository*, compose path `docker-compose.yml`), which builds the image on your host; or, once the repository is on GitHub, use the image the included workflow (`.github/workflows/docker.yml`) publishes for amd64 and arm64 on every push to `main`, and paste this into the web editor:
+**Portainer.** Either create a stack from this Git repository (*Stacks → Add stack → Repository*, compose path `docker-compose.yml`), which builds the image on your host; or use the published image, which the included workflow (`.github/workflows/docker.yml`) builds for amd64 and arm64 on every push to `main`, and paste this into the web editor:
 
 ```yaml
 services:
   album-player:
-    image: ghcr.io/<owner>/<repo>:latest
+    image: ghcr.io/nathanbland/album-player:latest
     restart: unless-stopped
     ports: ["5173:5173"]
     volumes: ["/path/to/your/music:/music:ro"]
@@ -121,3 +137,13 @@ Space plays and pauses, ← goes to the previous track and → to the next. Medi
 ## Static hosting
 
 `python3 scripts/scan_library.py` writes `albums/library.json`, so the folder can be served by any static host. The host must support Range requests, which most do.
+
+## Development
+
+There's nothing to build: edit the files and reload. `scripts/check-image.sh --local` runs the server smoke tests without Docker. Add `?perf` to the URL for an overlay with frame timings, long tasks and audio stalls (it works on phones too, and **Copy log** copies everything for a bug report).
+
+Issues and pull requests are welcome.
+
+## License
+
+[MIT](LICENSE). The decoders in `vendor/` are [wasm-audio-decoders](https://github.com/eshaz/wasm-audio-decoders) by Ethan Halsall, also MIT.
