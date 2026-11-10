@@ -1,5 +1,6 @@
-# Paste into a Portainer stack (or `docker compose up -d`). Change the music path on the left of
-# the volume to wherever your collection lives on the host; it's mounted read-only.
+# Paste into a Portainer stack (or `docker compose up -d`). Change only the LEFT side of the volume
+# to wherever your collection lives on the host. Keep the right side as /music: that's where the
+# server looks (or set MUSIC_DIR to match). It's mounted read-only.
 services:
   album-player:
     build: .
@@ -9,7 +10,7 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - /path/to/your/music:/music:ro
+      - /path/to/your/music:/music:ro   # host path : container path (keep /music)
     environment:
       RESCAN_SECONDS: "600"   # refresh the library every 10 min; /albums/library.json?rescan=1 forces it
       QUIET: "1"              # set to 0 to log every request

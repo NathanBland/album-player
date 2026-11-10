@@ -34,7 +34,7 @@ Options (flags or environment variables):
 |---|---|---|---|
 | `--host` | `HOST` | `127.0.0.1` | `0.0.0.0` to accept connections from other machines |
 | `--port` | `PORT` | `5173` | |
-| | `MUSIC_DIR` | `albums/` | your music collection, anywhere on disk (served at `/albums/`) |
+| | `MUSIC_DIR` | `albums/` (`/music` in the Docker image) | your music collection, anywhere on disk (served at `/albums/`) |
 | `--rescan` | `RESCAN_SECONDS` | `0` | `0`: rescan the library on every page load. `N`: scan once in the background, cache it, refresh every N seconds. `/albums/library.json?rescan=1` forces a rescan. |
 | `--quiet` | `QUIET` | off | log only errors |
 
@@ -42,7 +42,9 @@ Options (flags or environment variables):
 
 ## Docker
 
-The image is the app plus the same server (Python standard library only, no dependencies). Mount your collection read-only at `/music`; the library is scanned in the background at startup and refreshed every 10 minutes.
+The image is the app plus the same server (Python standard library only, no dependencies). The library is scanned in the background at startup and refreshed every 10 minutes.
+
+**Mount your collection at `/music` inside the container.** In a volume mapping (`-v` or `volumes:`), the left side is where your music is on the host and the right side is where the container sees it. Change only the left side, and keep `:/music:ro`. If you mount it somewhere else, set `MUSIC_DIR` to that path; otherwise the scan finds nothing and the log reports `0 track(s)`.
 
 To build it yourself instead of using `ghcr.io/nathanbland/album-player`:
 
@@ -66,10 +68,30 @@ services:
     image: ghcr.io/nathanbland/album-player:latest
     restart: unless-stopped
     ports: ["5173:5173"]
-    volumes: ["/path/to/your/music:/music:ro"]
+    volumes:
+      - /path/to/your/music:/music:ro   # host path : container path (keep /music)
 ```
 
-The container runs as uid 1000. If that user can't read your files, set `user: "<uid>:<gid>"` to match their owner rather than loosening permissions. The first page load after a start waits for the initial scan (a few seconds per thousand tracks; longer over a network share).
+**Music on a NAS (NFS).** Use a named volume and mount it at `/music` the same way:
+
+```yaml
+services:
+  album-player:
+    image: ghcr.io/nathanbland/album-player:latest
+    restart: unless-stopped
+    ports: ["5173:5173"]
+    volumes:
+      - nas-music:/music:ro
+
+volumes:
+  nas-music:
+    driver_opts:
+      type: nfs
+      o: "addr=192.168.1.10,nolock,soft,ro"
+      device: ":/export/path/to/Music"
+```
+
+The container runs as uid 1000. If the scan still finds 0 tracks with the right mount, check the files' owner with `ls -ln`: if uid 1000 can't read them, set `user: "<uid>:<gid>"` to match their owner rather than loosening permissions. The first page load after a start waits for the initial scan (a few seconds per thousand tracks; longer over a network share).
 
 **Behind nginx (or any reverse proxy).** Every URL in the app is relative, so it works at the root or under a sub-path. Range requests must reach the container (nginx forwards them by default); turn off buffering so large files stream:
 
