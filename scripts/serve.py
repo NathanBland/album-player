@@ -57,8 +57,10 @@ class Library:
         t = time.time()
         albums = scan_library.scan()
         self.body = json.dumps({"albums": albums}).encode()
-        print(f"library: {len(albums)} folder(s) with {sum(len(a['tracks']) for a in albums)} track(s) "
-              f"scanned in {time.time() - t:.1f}s", flush=True)
+        tracks = sum(len(a["tracks"]) for a in albums)
+        print(f"library: {len(albums)} folder(s) with {tracks} track(s) scanned in {time.time() - t:.1f}s", flush=True)
+        for hint in scan_library.diagnose(tracks):
+            print(f"library: warning: {hint}", file=sys.stderr, flush=True)
 
     def get(self, force=False):
         with self.lock:  # one scan at a time; requests during a scan wait for its result

@@ -69,20 +69,25 @@ def pick_cover(images):
     return (images[0], False) if images else (None, False)  # only thumbnails: last resort
 
 
+unreadable = []  # folders the last scan couldn't open, for diagnose()
+
+
 def scan():
+    unreadable.clear()
     if not ALBUMS.is_dir():
         return []
     albums = []
     # os.walk(followlinks=True): a library symlinked into albums/ (e.g. a NAS share) is scanned too;
-    # Path.rglob skips symlinked folders before Python 3.13.
-    walked = [Path(r) for r, ds, _ in os.walk(ALBUMS, followlinks=True) if not ds.sort()]
+    # Path.rglob skips symlinked folders before Python 3.13. onerror: os.walk otherwise skips
+    # unreadable folders silently, which makes a permissions problem look like an empty library.
+    walked = [Path(r) for r, ds, _ in os.walk(ALBUMS, followlinks=True, onerror=unreadable.append) if not ds.sort()]
     for d in sorted(walked, key=lambda p: natural_key(p.as_posix())):
         if not d.is_dir() or any(part.startswith(".") for part in d.relative_to(ALBUMS).parts):
             continue
         try:
             files = sorted((f for f in d.iterdir() if f.is_file() and not f.name.startswith(".")), key=lambda f: natural_key(f.name))
         except OSError as e:  # e.g. a symlink into a macOS-protected folder like ~/Downloads
-            print(f"warning: skipping {d}: {e}", file=sys.stderr)
+            unreadable.append(e)
             continue
         audio = [f for f in files if f.suffix.lower() in AUDIO]
         if not audio:
@@ -118,8 +123,71 @@ def scan():
     return albums
 
 
+def _whoami():
+    try:
+        return f"uid {os.getuid()}, gid {os.getgid()}"
+    except AttributeError:  # Windows
+        return "the current user"
+
+
+def _other_mounts():
+    """Mount points (Linux) that look like a music share, for 'did you mean /music?' hints."""
+    try:
+        lines = Path("/proc/mounts").read_text().splitlines()
+    except OSError:
+        return []
+    found = []
+    for line in lines:
+        parts = line.split()
+        if len(parts) < 3:
+            continue
+        point, fstype = parts[1].replace("\\040", " "), parts[2]
+        if point == str(ALBUMS) or point.startswith(("/proc", "/sys", "/dev", "/run", "/etc/")) or point == "/":
+            continue
+        if fstype.startswith(("nfs", "cifs", "smb", "fuse")) or point.startswith(("/mnt", "/media", "/data", "/srv")):
+            found.append(point)
+    return found
+
+
+def diagnose(track_count):
+    """Explain a scan that found nothing (or skipped folders), as warning lines; [] when all is well."""
+    where = f"music folder {ALBUMS}"
+    hints = []
+    if track_count == 0:
+        try:
+            entries = [n for n in os.listdir(ALBUMS) if not n.startswith(".") and n != "library.json"]
+        except FileNotFoundError:
+            entries, hints = None, [f"{where} doesn't exist."]
+        except OSError as e:
+            entries, hints = None, [f"can't read {where} as {_whoami()}: {e.strerror}. "
+                                    "Run as a user that can read it (Docker: user: \"<uid>:<gid>\" matching the files' owner)."]
+        if entries == []:
+            hints.append(f"{where} is empty. Mount your collection there (Docker: the right side of the volume "
+                         f"must be {ALBUMS}, e.g. /path/to/music:{ALBUMS}:ro) or set MUSIC_DIR to where it is.")
+        elif entries and not unreadable:
+            hints.append(f"no audio files found in {where} ({len(entries)} item(s) at the top level). "
+                         f"Looked for: {' '.join(sorted(AUDIO))}.")
+        if entries is not None and not entries:
+            others = _other_mounts()
+            if others:
+                hints.append(f"found a mount at {', '.join(others)}: did you mean to mount it at {ALBUMS}?")
+    if unreadable:
+        first = unreadable[0]
+        owner = ""
+        try:
+            st = os.stat(first.filename)
+            owner = f", owned by uid {st.st_uid} gid {st.st_gid}"
+        except (OSError, TypeError):
+            pass
+        hints.append(f"{len(unreadable)} folder(s) couldn't be read as {_whoami()}, e.g. {first.filename}: "
+                     f"{first.strerror}{owner}. Docker: set user: \"<uid>:<gid>\" to match the files' owner.")
+    return hints
+
+
 if __name__ == "__main__":
     ALBUMS.mkdir(exist_ok=True)
     found = scan()
     (ALBUMS / "library.json").write_text(json.dumps({"albums": found}, indent=2))
     print(f"Wrote {ALBUMS / 'library.json'} with {len(found)} album(s).")
+    for hint in diagnose(sum(len(a["tracks"]) for a in found)):
+        print(f"warning: {hint}", file=sys.stderr)

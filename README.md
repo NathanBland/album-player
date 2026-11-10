@@ -91,7 +91,7 @@ volumes:
       device: ":/export/path/to/Music"
 ```
 
-The container runs as uid 1000. If the scan still finds 0 tracks with the right mount, check the files' owner with `ls -ln`: if uid 1000 can't read them, set `user: "<uid>:<gid>"` to match their owner rather than loosening permissions. The first page load after a start waits for the initial scan (a few seconds per thousand tracks; longer over a network share).
+The container runs as uid 1000. When a scan finds nothing or skips folders, the log says why (nothing mounted at `/music`, a mount somewhere else, folders it isn't allowed to read and who owns them). If uid 1000 can't read your files, set `user: "<uid>:<gid>"` to match their owner rather than loosening permissions. The first page load after a start waits for the initial scan (a few seconds per thousand tracks; longer over a network share).
 
 **Behind nginx (or any reverse proxy).** Every URL in the app is relative, so it works at the root or under a sub-path. Range requests must reach the container (nginx forwards them by default); turn off buffering so large files stream:
 
